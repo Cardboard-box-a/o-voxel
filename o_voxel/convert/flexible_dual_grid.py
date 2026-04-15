@@ -222,15 +222,7 @@ def flexible_dual_grid_to_mesh(
     mesh_vertices = (coords.float() + dual_vertices) / (2 * N) - 0.5
 
     # Store active voxels into hashmap
-    # ROCm fix: capacity must be prime to avoid hash collisions with grid-aligned keys
-    # Keys = x*gs^2 + y*gs + z; if capacity % gs == 0, only z contributes to hash
-    def _next_prime(n):
-        n = int(n * 4 + 1) | 1  # start odd, ~4x capacity
-        while True:
-            if all(n % i != 0 for i in range(3, min(1000, int(n**0.5)+1), 2)):
-                return n
-            n += 2
-    hashmap = _init_hashmap(grid_size, _next_prime(N), device=coords.device)
+    hashmap = _init_hashmap(grid_size, 2 * N, device=coords.device)
     _C.hashmap_insert_3d_idx_as_val_cuda(*hashmap, torch.cat([torch.zeros_like(coords[:, :1]), coords], dim=-1), *grid_size.tolist())
 
     # Find connected voxels
@@ -245,7 +237,6 @@ def flexible_dual_grid_to_mesh(
     connected_voxel_valid = (connected_voxel_indices != 0xffffffff).all(dim=1)
     quad_indices = connected_voxel_indices[connected_voxel_valid].int()                             # (L, 4)
     L = quad_indices.shape[0]
-    print(f"DEBUG MESH: N={N} M={M} L={L} valid_ratio={connected_voxel_valid.float().mean():.3f}")
 
     # Construct triangles
     if not train:
