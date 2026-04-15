@@ -29,7 +29,5 @@ dependencies = [
     "trimesh",
     "tqdm",
     "zstandard",
-    "easydict",
-    "cumesh",
-    "flex_gemm"
+    "easydict"
 ]
